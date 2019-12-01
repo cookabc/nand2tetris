@@ -21,7 +21,6 @@ module.exports = class Parser {
       cmd = this.removeComments(this.commands.shift()).trim()
     }
     this.currentCommand = cmd
-    // console.log(cmd)
     const segs = cmd.split(' ')
     if (segs.length > 3) {
       throw 'Too much arguments!'
