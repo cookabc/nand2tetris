@@ -49,6 +49,7 @@ if (process.argv.length !== 3) {
 } else {
   const inputFile = process.argv[2]
   const writer = new Writer(inputFile)
+  writer.writeInit()
   if (fs.lstatSync(inputFile).isDirectory()) {
     fs.readdir(inputFile, (err, files) => {
       if (err) {

@@ -1,5 +1,5 @@
 const arithmeticCmds = ['add', 'sub', 'neg', 'eq', 'gt', 'lt', 'and', 'or', 'not']
-const unaryCmds = ['pop', 'push', 'label', 'if', 'goto', 'function', 'call']
+const unaryCmds = ['pop', 'push', 'label', 'if-goto', 'goto', 'function', 'call']
 
 module.exports = class Parser {
 
@@ -21,6 +21,7 @@ module.exports = class Parser {
       cmd = this.removeComments(this.commands.shift()).trim()
     }
     this.currentCommand = cmd
+    // console.log(cmd)
     const segs = cmd.split(' ')
     if (segs.length > 3) {
       throw 'Too much arguments!'
@@ -32,7 +33,11 @@ module.exports = class Parser {
       this.currentCommandType = 'RETURN'
       this.argument1 = segs[0]
     } else if (unaryCmds.includes(segs[0])) {
-      this.currentCommandType = segs[0].toUpperCase()
+      if (segs[0] === 'if-goto') {
+        this.currentCommandType = 'IF'
+      } else {
+        this.currentCommandType = segs[0].toUpperCase()
+      }
       this.argument1 = segs[1]
     } else if (cmd === '') {
       this.currentCommandType = ''
@@ -66,7 +71,7 @@ module.exports = class Parser {
   }
 
   removeComments(str) {
-    if(str.includes('//')) {
+    if (str.includes('//')) {
       str = str.slice(0, str.indexOf('//'))
     }
     return str

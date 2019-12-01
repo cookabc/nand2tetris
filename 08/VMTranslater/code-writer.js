@@ -6,6 +6,8 @@ module.exports = class Writer {
   constructor(outputFile) {
     this.arthJumpFlag = 0
     this.assembleOut = ''
+    this.labelCount = 0
+    this.labelRegex = new RegExp("^[^0-9][0-9A-Za-z\\_\\:\\.\\$]+")
     this.outputFile = this.setFileName(outputFile)
   }
 
@@ -46,14 +48,16 @@ module.exports = class Writer {
         break
       case 'not':
         output =
-          `@SP
+          `
+@SP
 A=M-1
 M=!M
 `
         break
       case 'neg':
         output =
-          `D=0
+          `
+D=0
 @SP
 A=M-1
 M=D-M
@@ -97,7 +101,8 @@ M=0
     switch (segment) {
       case 'constant':
         output =
-          `@${index}
+          `
+@${index}
 D=A
 @SP
 A=M
@@ -169,7 +174,8 @@ M=M+1
 @${index}
 D=D+A
 `
-    return `@${segment}
+    return `
+@${segment}
 ${str}
 @R13
 M=D
@@ -188,7 +194,8 @@ M=D
       `@${index}
 A=D+A
 D=M`
-    return `@${segment}
+    return `
+@${segment}
 D=M
 ${str}
 @SP
@@ -198,27 +205,118 @@ M=D
 M=M+1
 `
   }
+
   writeInit() {
-
+    this.assembleOut += `@256
+D=A
+@SP
+M=D
+`
+    this.writeCall('Sys.init', 0)
   }
+
   writeLabel(label) {
-
+    this.assembleOut += `
+(${label})
+`
   }
+
   writeGoto(label) {
-
+    this.assembleOut += `
+@${label}
+0;JMP`
   }
+
   writeIf(label) {
-
+    this.assembleOut += `
+@SP
+AM=M-1
+D=M
+A=A-1
+@${label}
+D;JNE
+`
   }
+
   writeCall(functionName, numArgs) {
-
+    this.labelCount += 1
+    const newLabel = `RETURN_LABEL${this.labelCount}`
+    let output = `
+@${newLabel}
+D=A
+@SP
+A=M
+M=D
+@SP
+M=M+1
+`
+    output += this.pushTemplate("LCL", 0, true)
+    output += this.pushTemplate("ARG", 0, true)
+    output += this.pushTemplate("THIS", 0, true)
+    output += this.pushTemplate("THAT", 0, true)
+    output += `
+@SP
+D=M
+@5
+D=D-A
+@${numArgs}
+D=D-A
+@ARG
+M=D
+@SP
+D=M
+@LCL
+M=D
+@${functionName}
+0;JMP
+(${newLabel})
+`
+    this.assembleOut += output
   }
+
   writeReturn() {
-
+    this.assembleOut += `
+@LCL
+D=M
+@R11
+M=D
+@5
+A=D-A
+D=M
+@R12
+M=D
+${this.popTemplate("ARG", 0, false)}
+@ARG
+D=M
+@SP
+M=D+1
+${this.preFrameTemplate("THAT")}
+${this.preFrameTemplate("THIS")}
+${this.preFrameTemplate("ARG")}
+${this.preFrameTemplate("LCL")}
+@R12
+A=M
+0;JMP
+`
   }
+  preFrameTemplate(position) {
+    return `
+@R11
+D=M-1
+AM=D
+D=M
+@${position}
+M=D
+`
+  }
+
   writeFunction(functionName, numLocals) {
-
+    this.assembleOut += `(${functionName})`
+    for (let i = 0; i < numLocals; i++) {
+      this.writePushPop('PUSH', 'constant', 0)
+    }
   }
+
   close() {
     fs.writeFile(this.outputFile, this.assembleOut, (err) => {
       if (err) {
