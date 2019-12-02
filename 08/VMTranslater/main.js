@@ -4,8 +4,12 @@ const Parser = require('./parser.js')
 const Writer = require('./code-writer')
 
 const processFile = (writer, file) => {
+  if (!file.endsWith('.vm')) {
+    return
+  }
+  writer.setFileName(file)
   const commands = fs.readFileSync(file, 'utf-8')
-  const parser = new Parser(commands.split('\r\n'))
+  const parser = new Parser(commands.split('\n'))
   while (parser.hasMoreCommands()) {
     parser.advance()
     const commandType = parser.commandType()
@@ -14,8 +18,6 @@ const processFile = (writer, file) => {
         writer.writeArithmetic(parser.arg1())
         break;
       case 'POP':
-        writer.writePushPop(commandType, parser.arg1(), parser.arg2())
-        break;
       case 'PUSH':
         writer.writePushPop(commandType, parser.arg1(), parser.arg2())
         break;
@@ -49,20 +51,18 @@ if (process.argv.length !== 3) {
 } else {
   const inputFile = process.argv[2]
   const writer = new Writer(inputFile)
-  writer.writeInit()
   if (fs.lstatSync(inputFile).isDirectory()) {
     fs.readdir(inputFile, (err, files) => {
       if (err) {
         throw err
       }
-      files.forEach(file => {
-        if (file.endsWith('.vm')) {
-          processFile(writer, path.resolve(`${path.resolve(inputFile)}/${file}`))
-        }
-      })
+      if (files.includes('Sys.vm')) {
+        writer.writeInit()
+      }
+      files.forEach(file => processFile(writer, `${inputFile}/${file}`))
     })
   } else {
-    processFile(writer, path.resolve(inputFile))
+    processFile(writer, inputFile)
   }
   writer.close()
 }

@@ -1,17 +1,19 @@
 const fs = require('fs')
 const path = require('path')
 
-module.exports = class Writer {
+const callSymbols = ['LCL', 'ARG', 'THIS', 'THAT']
+const returnSymbols = ['THAT', 'THIS', 'ARG', 'LCL']
 
+module.exports = class Writer {
   constructor(outputFile) {
-    this.arthJumpFlag = 0
-    this.assembleOut = ''
+    this.jumpIndex = 0
     this.labelCount = 0
-    this.labelRegex = new RegExp("^[^0-9][0-9A-Za-z\\_\\:\\.\\$]+")
-    this.outputFile = this.setFileName(outputFile)
+    this.fileName = ''
+    this.outStream = ''
+    this.outputFile = this.setOutputFile(outputFile)
   }
 
-  setFileName(fileName) {
+  setOutputFile(fileName) {
     if (fs.lstatSync(fileName).isDirectory()) {
       return `${path.resolve(fileName)}/${path.basename(fileName)}.asm`
     } else {
@@ -19,306 +21,303 @@ module.exports = class Writer {
     }
   }
 
+  setFileName(fileName) {
+    this.fileName = path.basename(fileName)
+  }
+
+  writeInit() {
+    this.outStream += '@256\n'
+      + 'D=A\n'
+      + '@SP\n'
+      + 'M=D\n'
+    this.writeCall('Sys.init', 0)
+  }
+
   writeArithmetic(command) {
     let output
     switch (command) {
       case 'add':
-        output = this.arithmeticTemplate1() + 'M=M+D\n'
+        output = '@SP\n'
+          + 'AM=M-1\n'
+          + 'D=M\n'
+          + 'A=A-1\n'
+          + 'M=M+D\n'
         break
       case 'sub':
-        output = this.arithmeticTemplate1() + 'M=M-D\n'
-        break
-      case 'and':
-        output = this.arithmeticTemplate1() + 'M=M&D\n'
-        break
-      case 'or':
-        output = this.arithmeticTemplate1() + 'M=M|D\n'
-        break
-      case 'gt':
-        output = this.arithmeticTemplate2("JLE")
-        this.arthJumpFlag += 1
-        break
-      case 'lt':
-        output = this.arithmeticTemplate2("JGE")
-        this.arthJumpFlag += 1
-        break
-      case 'eq':
-        output = this.arithmeticTemplate2("JNE")
-        this.arthJumpFlag += 1
-        break
-      case 'not':
-        output =
-          `
-@SP
-A=M-1
-M=!M
-`
+        output = '@SP\n'
+          + 'AM=M-1\n'
+          + 'D=M\n'
+          + 'A=A-1\n'
+          + 'M=M-D\n'
         break
       case 'neg':
-        output =
-          `
-D=0
-@SP
-A=M-1
-M=D-M
-`
+        output = '@SP\n'
+          + 'AM=M-1\n'
+          + 'M=-M\n'
+          + '@SP\n'
+          + 'M=M+1\n'
         break
-      default:
+      case 'eq':
+        output = this.jumpTemplate('JEQ')
+        break
+      case 'gt':
+        output = this.jumpTemplate('JGT')
+        break
+      case 'lt':
+        output = this.jumpTemplate('JLT')
+        break
+      case 'and':
+        output = '@SP\n'
+          + 'AM=M-1\n'
+          + 'D=M\n'
+          + 'A=A-1\n'
+          + 'M=M&D\n'
+        break
+      case 'or':
+        output = '@SP\n'
+          + 'AM=M-1\n'
+          + 'D=M\n'
+          + 'A=A-1\n'
+          + 'M=M|D\n'
+        break
+      case 'not':
+        output = '@SP\n'
+          + 'AM=M-1\n'
+          + 'M=!M\n'
+          + '@SP\n'
+          + 'M=M+1\n'
         break
     }
-    this.assembleOut += output
-  }
-  arithmeticTemplate1() {
-    return `@SP
-AM=M-1
-D=M
-A=A-1
-`
-  }
-  arithmeticTemplate2(type) {
-    return `@SP
-AM=M-1
-D=M
-A=A-1
-D=M-D
-@FALSE${this.arthJumpFlag}
-D;${type}
-@SP
-A=M-1
-M=-1
-@CONTINUE${this.arthJumpFlag}
-0;JMP
-(FALSE${this.arthJumpFlag})
-@SP
-A=M-1
-M=0
-(CONTINUE${this.arthJumpFlag})
-`
+    this.outStream += output
   }
 
   writePushPop(command, segment, index) {
     let output
     switch (segment) {
       case 'constant':
-        output =
-          `
-@${index}
-D=A
-@SP
-A=M
-M=D
-@SP
-M=M+1
-`
+        output = `@${index}\n`
+          + 'D=A\n'
+          + '@SP\n'
+          + 'A=M\n'
+          + 'M=D\n'
+          + '@SP\n'
+          + 'M=M+1\n'
         break
-      case 'local':
+      case 'static':
         output = {
-          'POP': this.popTemplate("LCL", index, false),
-          'PUSH': this.pushTemplate("LCL", index, false)
-        }[command]
-        break
-      case 'argument':
-        output = {
-          'POP': this.popTemplate("ARG", index, false),
-          'PUSH': this.pushTemplate("ARG", index, false)
-        }[command]
-        break
-      case 'this':
-        output = {
-          'POP': this.popTemplate("THIS", index, false),
-          'PUSH': this.pushTemplate("THIS", index, false)
-        }[command]
-        break
-      case 'that':
-        output = {
-          'POP': this.popTemplate("THAT", index, false),
-          'PUSH': this.pushTemplate("THAT", index, false)
-        }[command]
-        break
-      case 'temp':
-        output = {
-          'POP': this.popTemplate("R5", index + 5, false),
-          'PUSH': this.pushTemplate("R5", index + 5, false)
+          PUSH: `@${this.fileName}${index}\n`
+            + 'D=M\n'
+            + '@SP\n'
+            + 'A=M\n'
+            + 'M=D\n'
+            + '@SP\n'
+            + 'M=M+1\n',
+          POP: '@SP\n'
+            + 'AM=M-1\n'
+            + 'D=M\n'
+            + `@${this.fileName}${index}\n`
+            + 'M=D\n'
         }[command]
         break
       case 'pointer':
         if (index === 0) {
-          output = {
-            'POP': this.popTemplate("THIS", index, true),
-            'PUSH': this.pushTemplate("THIS", index, true)
-          }[command]
+          segment = 'THIS'
+        } else if (index === 1) {
+          segment = 'THAT'
         }
-        if (index === 1) {
-          output = {
-            'POP': this.popTemplate("THAT", index, true),
-            'PUSH': this.pushTemplate("THAT", index, true)
-          }[command]
-        }
-        break
-      case 'static':
         output = {
-          'POP': this.popTemplate(`${index + 16}`, index, true),
-          'PUSH': this.pushTemplate(`${index + 16}`, index, true)
+          PUSH: `@${segment}\n`
+            + 'D=M\n'
+            + '@SP\n'
+            + 'A=M\n'
+            + 'M=D\n'
+            + '@SP\n'
+            + 'M=M+1\n',
+          POP: `@${segment}\n`
+            + 'D=A\n'
+            + '@R13\n'
+            + 'M=D\n'
+            + '@SP\n'
+            + 'AM=M-1\n'
+            + 'D=M\n'
+            + '@R13\n'
+            + 'A=M\n'
+            + 'M=D\n'
+        }[command]
+        break
+      case 'temp':
+        output = {
+          PUSH: this.pushTemplate('@R5\n', index, false),
+          POP: this.popTemplate('@R5\n', index, false)
         }[command]
         break
       default:
-        break
+        let str
+        if (segment === 'argument') {
+          str = '@ARG\n'
+        } else if (segment === 'local') {
+          str = '@LCL\n'
+        } else {
+          str = `@${segment.toUpperCase()}\n`
+        }
+        output = {
+          PUSH: this.pushTemplate(str, index, true),
+          POP: this.popTemplate(str, index, true)
+        }[command]
     }
-    this.assembleOut += output
-  }
-  popTemplate(segment, index, flag) {
-    const str = flag
-      ? 'D=A'
-      :
-      `D=M
-@${index}
-D=D+A
-`
-    return `
-@${segment}
-${str}
-@R13
-M=D
-@SP
-AM=M-1
-D=M
-@R13
-A=M
-M=D
-`
-  }
-  pushTemplate(segment, index, flag) {
-    const str = flag
-      ? ''
-      :
-      `@${index}
-A=D+A
-D=M`
-    return `
-@${segment}
-D=M
-${str}
-@SP
-A=M
-M=D
-@SP
-M=M+1
-`
-  }
-
-  writeInit() {
-    this.assembleOut += `@256
-D=A
-@SP
-M=D
-`
-    this.writeCall('Sys.init', 0)
+    this.outStream += output
   }
 
   writeLabel(label) {
-    this.assembleOut += `
-(${label})
-`
+    this.outStream += `(${label})\n`
   }
 
   writeGoto(label) {
-    this.assembleOut += `
-@${label}
-0;JMP`
+    this.outStream += `@${label}\n` + '0;JMP\n'
   }
 
   writeIf(label) {
-    this.assembleOut += `
-@SP
-AM=M-1
-D=M
-A=A-1
-@${label}
-D;JNE
-`
+    this.outStream += '@SP\n'
+      + 'AM=M-1\n'
+      + 'D=M\n'
+      + `@${label}\n`
+      + 'D;JNE\n'
   }
 
   writeCall(functionName, numArgs) {
-    this.labelCount += 1
-    const newLabel = `RETURN_LABEL${this.labelCount}`
-    let output = `
-@${newLabel}
-D=A
-@SP
-A=M
-M=D
-@SP
-M=M+1
-`
-    output += this.pushTemplate("LCL", 0, true)
-    output += this.pushTemplate("ARG", 0, true)
-    output += this.pushTemplate("THIS", 0, true)
-    output += this.pushTemplate("THAT", 0, true)
-    output += `
-@SP
-D=M
-@5
-D=D-A
-@${numArgs}
-D=D-A
-@ARG
-M=D
-@SP
-D=M
-@LCL
-M=D
-@${functionName}
-0;JMP
-(${newLabel})
-`
-    this.assembleOut += output
+    let output = `@${functionName}_RETURN_${this.labelCount}\n`
+      + 'D=A\n'
+      + '@SP\n'
+      + 'A=M\n'
+      + 'M=D\n'
+      + '@SP\n'
+      + 'M=M+1\n'
+    callSymbols.forEach(symbol => {
+      output += `@${symbol}\n`
+        + 'D=M\n'
+        + '@SP\n'
+        + 'A=M\n'
+        + 'M=D\n'
+        + '@SP\n'
+        + 'M=M+1\n'
+    })
+    output += `@${numArgs}\n`
+      + 'D=A\n'
+      + '@5\n'
+      + 'D=A+D\n'
+      + '@SP\n'
+      + 'D=M-D\n'
+      + '@ARG\n'
+      + 'M=D\n'
+      + '@SP\n'
+      + 'D=M\n'
+      + '@LCL\n'
+      + 'M=D\n'
+      + `@${functionName}\n`
+      + '0;JMP\n'
+      + `(${functionName}_RETURN_${this.labelCount})\n`
+    this.labelCount++
+    this.outStream += output
   }
 
   writeReturn() {
-    this.assembleOut += `
-@LCL
-D=M
-@R11
-M=D
-@5
-A=D-A
-D=M
-@R12
-M=D
-${this.popTemplate("ARG", 0, false)}
-@ARG
-D=M
-@SP
-M=D+1
-${this.preFrameTemplate("THAT")}
-${this.preFrameTemplate("THIS")}
-${this.preFrameTemplate("ARG")}
-${this.preFrameTemplate("LCL")}
-@R12
-A=M
-0;JMP
-`
-  }
-  preFrameTemplate(position) {
-    return `
-@R11
-D=M-1
-AM=D
-D=M
-@${position}
-M=D
-`
+    let tmpStr = ''
+    returnSymbols.forEach(symbol => {
+      tmpStr += '@R13\n'
+        + 'D=M-1\n'
+        + 'AM=D\n'
+        + 'D=M\n'
+        + `@${symbol}\n`
+        + 'M=D\n'
+    })
+    this.outStream += '@LCL\n'
+      + 'D=M\n'
+      + '@R13\n'
+      + 'M=D\n'
+      + '@5\n'
+      + 'A=D-A\n'
+      + 'D=M\n'
+      + '@R14\n'
+      + 'M=D\n'
+      + '@SP\n'
+      + 'AM=M-1\n'
+      + 'D=M\n'
+      + '@ARG\n'
+      + 'A=M\n'
+      + 'M=D\n'
+      + '@ARG\n'
+      + 'D=M+1\n'
+      + '@SP\n'
+      + 'M=D\n'
+      + tmpStr
+      + '@R14\n'
+      + 'A=M\n'
+      + '0;JMP\n'
   }
 
   writeFunction(functionName, numLocals) {
-    this.assembleOut += `(${functionName})`
+    this.outStream += `(${functionName})\n`
     for (let i = 0; i < numLocals; i++) {
       this.writePushPop('PUSH', 'constant', 0)
     }
   }
 
+  jumpTemplate(type) {
+    let output = '@SP\n'
+      + 'AM=M-1\n'
+      + 'D=M\n'
+      + 'A=A-1\n'
+      + 'D=M-D\n'
+      + `@TRUE${this.jumpIndex}\n`
+      + `D;${type}\n`
+      + '@SP\n'
+      + 'A=M-1\n'
+      + 'M=0\n'
+      + `@CONTINUE${this.jumpIndex}\n`
+      + '0;JMP\n'
+      + `(TRUE${this.jumpIndex})\n`
+      + '@SP\n'
+      + 'A=M-1\n'
+      + 'M=-1\n'
+      + `(CONTINUE${this.jumpIndex})\n`
+    return output
+  }
+
+  popTemplate(str, index, flag) {
+    let output = str
+      + `${flag ? 'D=M' : 'D=A'}\n`
+      + '@' + index + '\n'
+      + 'D=D+A\n'
+      + '@R13\n'
+      + 'M=D\n'
+      + '@SP\n'
+      + 'AM=M-1\n'
+      + 'D=M\n'
+      + '@R13\n'
+      + 'A=M\n'
+      + 'M=D\n'
+
+    return output
+  }
+
+  pushTemplate(str, index, flag) {
+    let output = str
+      + `${flag ? 'D=M' : 'D=A'}\n`
+      + '@' + index + '\n'
+      + 'A=D+A\n'
+      + 'D=M\n'
+      + '@SP\n'
+      + 'A=M\n'
+      + 'M=D\n'
+      + '@SP\n'
+      + 'M=M+1\n'
+
+    return output
+  }
+
   close() {
-    fs.writeFile(this.outputFile, this.assembleOut, (err) => {
+    const outputPath = this.outputFile
+    fs.writeFile(outputPath, this.outStream, (err) => {
       if (err) {
         throw err
       }

@@ -16,12 +16,14 @@ module.exports = class Parser {
   }
 
   advance() {
-    let cmd = this.removeComments(this.commands.shift()).trim()
-    while ((cmd === '' || cmd.startsWith('//')) && this.commands.length > 0) {
-      cmd = this.removeComments(this.commands.shift()).trim()
+    this.currentCommand = this.cleanCommand(this.commands.shift())
+    if (!this.currentCommand) {
+      this.currentCommandType = null
+      this.argument1 = null
+      this.argument2 = null
+      return
     }
-    this.currentCommand = cmd
-    const segs = cmd.split(' ')
+    const segs = this.currentCommand.split(' ')
     if (segs.length > 3) {
       throw 'Too much arguments!'
     }
@@ -69,10 +71,10 @@ module.exports = class Parser {
     }
   }
 
-  removeComments(str) {
-    if (str.includes('//')) {
-      str = str.slice(0, str.indexOf('//'))
+  cleanCommand(command) {
+    if (command.includes('//')) {
+      command = command.slice(0, command.indexOf('//'))
     }
-    return str
+    return command.trim() || false
   }
 }
