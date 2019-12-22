@@ -1,5 +1,4 @@
 const fs = require('fs')
-const path = require('path')
 const Parser = require('./parser.js')
 const Writer = require('./code-writer')
 

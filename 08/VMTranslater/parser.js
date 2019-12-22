@@ -2,7 +2,6 @@ const arithmeticCmds = ['add', 'sub', 'neg', 'eq', 'gt', 'lt', 'and', 'or', 'not
 const unaryCmds = ['pop', 'push', 'label', 'if-goto', 'goto', 'function', 'call']
 
 module.exports = class Parser {
-
   constructor(commands) {
     this.commands = commands
     this.currentCommand = null
