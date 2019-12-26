@@ -18,7 +18,9 @@ const firstPass = (parser, symbolTable) => {
     if (parser.commandType() == "L") {
       symbol = parser.symbol()
       symbolTable.addEntry(symbol, counter + 1)
-    } else { counter++ }
+    } else if (parser.commandType()) {
+      counter++
+    }
   }
 }
 
@@ -43,11 +45,11 @@ const secondPass = (parser, symbolTable, code) => {
 const generateACommand = (symbol, symbolTable) => {
   let binary
   if (isNaN(parseInt(symbol))) {
-    if (symbolTable.table[symbol]) {
+    if (symbolTable.contains(symbol)) {
       binary = int2Binary(symbolTable.getAddress(symbol))
     } else {
-      binary = int2Binary(ramAddress++)
-      symbolTable.addEntry(symbol, ramAddress)
+      binary = int2Binary(ramAddress)
+      symbolTable.addEntry(symbol, ramAddress++)
     }
   } else {
     binary = int2Binary(symbol)
