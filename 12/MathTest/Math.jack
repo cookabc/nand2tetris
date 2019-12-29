@@ -9,25 +9,32 @@
  */
 class Math {
 
-    static int NUM_BITS;
     static Array twoToThe;
 
     /** Initializes the library. */
     function void init() {
-        var int i;
-        var int currentVal;
-
-        let i = 0;
-        let currentVal = 1;
-        let NUM_BITS = 16;
         let twoToThe = Array.new(16);
-
-        while(i < NUM_BITS) {
-            let twoToThe[i] = currentVal;
-            let currentVal = currentVal + currentVal;
-            let i = i + 1;
-        }
+		let twoToThe[0] = 1;
+		let twoToThe[1] = 2;
+		let twoToThe[2] = 4;
+		let twoToThe[3] = 8;
+		let twoToThe[4] = 16;
+		let twoToThe[5] = 32;
+		let twoToThe[6] = 64;
+		let twoToThe[7] = 128;
+		let twoToThe[8] = 256;
+		let twoToThe[9] = 512;
+		let twoToThe[10] = 1024;
+		let twoToThe[11] = 2048;
+		let twoToThe[12] = 4096;
+		let twoToThe[13] = 8192;
+		let twoToThe[14] = 16384;
+		let twoToThe[15] = 16384 + 16384;
         return;
+    }
+
+    function boolean bit(int x, int j) {
+        return ~((x & twoToThe[j]) = 0);
     }
 
     /** Returns the absolute value of x. */
@@ -44,19 +51,22 @@ class Math {
      *  the Jack expressions x*y and multiply(x,y) return the same value.
      */
     function int multiply(int x, int y) {
-        var int sum, shiftedX, i;
-        let sum = 0;
-        let shiftedX = x;
-        let i = 0;
-        while(i < NUM_BITS) {
-            if(~(Math.bit(i, y) = 0))
-            {
-                let sum = sum + shiftedX;
-            }
-            let shiftedX = shiftedX + shiftedX;
-            let i = i + 1;
-        }
-        return sum;
+        var int j;
+		var int sum;
+		var int shiftedX;
+
+		let j = 0;
+		let sum = 0;
+		let shiftedX = x;
+
+		while (j < 16) { //each number is 16 bits
+			if (Math.bit(y, j) = true) {
+				let sum = sum + shiftedX;
+			}
+			let shiftedX = shiftedX + shiftedX;
+			let j = j + 1;
+		}
+		return sum;
     }
 
     /** Returns the integer part of x/y.
@@ -65,49 +75,57 @@ class Math {
      *  the Jack expressions x/y and divide(x,y) return the same value.
      */
     function int divide(int x, int y) {
-        var int q;
+        var int q, result;
+        var int negX;
+        var int negY;
 
         if (y = 0) {
             do Sys.error(3);
         }
-        if (x < 0) {
-            return -Math.divide(-x, y);
-        }
-        if (y < 0) {
-            return -Math.divide(x, -y);
-        }
+
+        let negX = x < 0;
+        let negY = y < 0;
+
+        let x = Math.abs(x);
+        let y = Math.abs(y);
         if (y > x) {
             return 0;
         }
-
-        let q = Math.divide(x, 2 * y);
-        if ((x - (2 * q * y)) < y) {
-            return 2 * q;
+        let q = Math.divide(x, y + y);
+        if (x - (Math.multiply(q + q, y)) < y) {
+            let result = q + q;
         } else {
-            return 2 * q + 1;
+            let result = q + q + 1;
+        }
+        if (negX = negY) {
+            return result;
+        } else {
+            return -result;
         }
     }
 
     /** Returns the integer part of the square root of x. */
     function int sqrt(int x) {
-        var int y, j, checked, squared;
+        var int result;
+		var int j;
+        var int checked;
+        var int squared;
 
         if (x < 0) {
             do Sys.error(4);
             return 0;
         }
-
-        let y = 0;
-        let j = NUM_BITS / 2 - 1;
-        while(~(j < 0)) {
-            let checked = y + twoToThe[j];
+        let result = 0;
+        let j = 7;
+        while (~(j < 0)) {
+            let checked = result + twoToThe[j];
             let squared = Math.multiply(checked, checked);
-            if(~(squared > x) & (squared > 0)) {
-                let y = checked;
+            if (~(squared > x) & (squared > 0)) {
+                let result = checked;
             }
             let j = j - 1;
         }
-        return y;
+        return result;
     }
 
     /** Returns the greater number. */
@@ -124,9 +142,5 @@ class Math {
             return a;
         }
         return b;
-    }
-
-    function int bit(int x, int j) {
-        return x & twoToThe[j];
     }
 }
