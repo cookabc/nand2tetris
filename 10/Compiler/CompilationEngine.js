@@ -1,6 +1,6 @@
 module.exports = class CompilationEngine {
-  constructor(params) {
-
+  constructor(tokenizer) {
+    this.tokenizer = tokenizer
   }
 
   compileClass() { }
