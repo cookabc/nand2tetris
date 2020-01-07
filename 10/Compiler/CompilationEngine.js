@@ -30,6 +30,18 @@ module.exports = class CompilationEngine {
     }
   }
 
+  checkAndWriteType() {
+    if (["INT", "CHAR", "BOOLEAN"].includes(this.tokenizer.keyword())) {
+      this.writeTag(this.tokenizer.token(), "keyword");
+      return true;
+    } else if (this.tokenizer.tokenType() === "IDENTIFIER") {
+      this.writeTag(this.tokenizer.identifier(), "identifier");
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   compileClass() {
     this.tokenizer.advance()
     if (this.tokenizer.keyword() == "CLASS") {
@@ -87,7 +99,53 @@ module.exports = class CompilationEngine {
       return
     }
   }
-  compileClassVarDec() { }
+  compileClassVarDec() {
+    this.output.push(this.spacing + "<classVarDec>")
+    this.increaseSpacing()
+
+    this.writeTag(this.tokenizer.token(), "keyword")
+
+    // match type
+    this.tokenizer.advance()
+    if (!this.checkAndWriteType()) {
+      console.warn("illegal type for class var dec")
+      return
+    }
+
+    // match varName
+    this.tokenizer.advance()
+    if (this.tokenizer.tokenType() === "IDENTIFIER") {
+      this.writeTag(this.tokenizer.identifier(), "identifier")
+    } else {
+      console.warn("illegal classVar identifier")
+      return
+    }
+
+    // match potential ", varName" part
+    this.tokenizer.advance()
+    while (this.tokenizer.symbol() === ",") {
+      this.writeTag(",", "symbol")
+      this.tokenizer.advance()
+      if (this.tokenizer.tokenType() == "IDENTIFIER") {
+        this.writeTag(this.tokenizer.identifier(), "identifier")
+      } else {
+        console.warn("illegal classVar identifier")
+        return
+      }
+      this.tokenizer.advance()
+    }
+
+    // match ;
+    if (this.tokenizer.symbol() === ";") {
+      this.writeTag(";", "symbol")
+    } else {
+      console.warn("no ending ;")
+      return
+    }
+
+    this.decreaseSpacing()
+    this.output.push(this.spacing + "</classVarDec>")
+  }
   compileSubroutine() { }
   compileParameterList() { }
   compileVarDec() { }
