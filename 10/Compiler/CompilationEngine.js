@@ -111,7 +111,6 @@ module.exports = class CompilationEngine {
       // write close tag of class
       this.decreaseSpacing()
       this.output.push(this.spacing + "</class>")
-      this.output.forEach(o => console.log(o))
     } else {
       console.warn("does not start with class")
       return
@@ -469,7 +468,7 @@ module.exports = class CompilationEngine {
     }
 
     this.tokenizer.advance()
-    compileExpression()
+    this.compileExpression()
 
     if (!this.checkSymbol(")")) {
       console.warn("No ) in while statement")
@@ -483,7 +482,7 @@ module.exports = class CompilationEngine {
     }
 
     this.tokenizer.advance()
-    compileStatements()
+    this.compileStatements()
 
     if (!this.checkSymbol("}")) {
       console.warn("No } in while statement")
