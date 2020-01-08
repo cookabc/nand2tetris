@@ -1,21 +1,21 @@
 const fs = require("fs")
 
-const symbolPattern = "(.*)(\\{|\\}|\\(|\\)|\\[|\\]|\\.|\\,|;|\\+|-|\\*|/|&|\\||<|>|=|~)(.*)"
-const commentPattern = "(^//.*)|(^/\\*.*)|^\\*.*"
+const commentPattern = "(//.*)|(/\\*.*)|\\*.*"
 const keywordPattern = "class|constructor|function|method|field|static|var|int|char|boolean|void|true|false|null|this|let|do|if|else|while|return"
-const identifierPattern = "^[^\d\W]\w*"
-const intPattern = "\\d+"
-const stringPattern = "^\"[^\"]+\"$"
+const symbolPattern = "[\\&\\*\\+\\(\\)\\.\\/\\,\\-\\]\\;\\~\\}\\|\\{\\>\\=\\[\\<]"
+const intPattern = "[0-9]+"
+const stringPattern = "\"[^\"\n]*\""
+const identifierPattern = "[\\w_]+"
+
+const combinedRegex = (...regexes) => new RegExp("(" + regexes.map(regex => new RegExp(regex).source).join(")|(") + ")", "g")
+const tokenPattern = combinedRegex(keywordPattern, symbolPattern, intPattern, stringPattern, identifierPattern)
 
 const keywordList = ["class", "constructor", "function", "method", "field", "static", "var", "int", "char", "boolean", "void", "true", "false", "null", "this", "let", "do", "if", "else", "while", "return"]
-const symbolList = ["{", "}", "(", ")", "[", "]", ".", ",", ";", "+", "-", "*", "/", "&", "|", "<", ">", "=", "~"];
 
 module.exports = class JackTokenizer {
   constructor(inputFile) {
-    this.tokens = []
     const inputStream = fs.readFileSync(inputFile, "utf-8")
     this.tokens = this.generateTokens(inputStream)
-    console.log(this.tokens)
     this.currentToken = null
   }
 
@@ -23,20 +23,13 @@ module.exports = class JackTokenizer {
     const tokens = []
     const tokenLines = inputStream.split("\n")
     tokenLines.forEach(i => {
-      let tokenLine = i.replace(commentPattern, " ")
-      if (tokenLine.includes("\"")) {
-        console.log(tokenLine)
+      let tokenLine = i.replace(new RegExp(commentPattern, "g"), "")
+      if (tokenLine) {
+        const matches = tokenLine.matchAll(tokenPattern)
+        for (const match of matches) {
+          tokens.push(match[0])
+        }
       }
-      if (tokenLine.length > 1 && tokenLine.match(symbolPattern)) {
-        symbolList.forEach(s => {
-          if (tokenLine.includes(s)) {
-            tokenLine = tokenLine.replace(s, " " + s + " ");
-          }
-        })
-      }
-      tokenLine.trim().split(" ").forEach(t => {
-        if (t) tokens.push(t)
-      })
     })
     return tokens
   }
