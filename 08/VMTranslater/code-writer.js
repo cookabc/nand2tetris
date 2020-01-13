@@ -315,7 +315,7 @@ module.exports = class Writer {
     return output
   }
 
-  close() {
+  writeFile() {
     const outputPath = this.outputFile
     fs.writeFile(outputPath, this.outStream, (err) => {
       if (err) {

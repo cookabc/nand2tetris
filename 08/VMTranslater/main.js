@@ -42,7 +42,7 @@ const processFile = (writer, file) => {
         break;
     }
   }
-  writer.close()
+  writer.writeFile()
 }
 
 if (process.argv.length !== 3) {
@@ -63,5 +63,4 @@ if (process.argv.length !== 3) {
   } else {
     processFile(writer, inputFile)
   }
-  writer.close()
 }
