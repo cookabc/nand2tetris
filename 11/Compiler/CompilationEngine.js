@@ -407,6 +407,7 @@ module.exports = class CompilationEngine {
         console.warn('return statement not ending with ;')
       }
     }
+    this.writer.writePush('constant', 0)
     this.writer.writeReturn()
   }
 
@@ -514,12 +515,14 @@ module.exports = class CompilationEngine {
       this.tokenizer.advance()
     } else if (this.tokenizer.tokenType() === 'STRING_CONST') {
       let strLiteral = this.tokenizer.stringVal()
+      strLiteral = [...strLiteral]
       this.writer.writePush('constant', strLiteral.length)
       this.writer.writeCall('String.new', 1)
-      for (let i = 0; i < strLiteral.length; i++) {
-        this.writer.writePush('constant', strLiteral.charAt(i))
+      strLiteral.forEach(s => {
+        let code = s.charCodeAt()
+        this.writer.writePush('constant', code)
         this.writer.writeCall('String.appendChar', 2)
-      }
+      })
       this.tokenizer.advance()
     } else if (this.checkKeyword('true') || this.checkKeyword('false') || this.checkKeyword('null') || this.checkKeyword('this')) {
       if (this.checkKeyword('null') || this.checkKeyword('false')) {
@@ -592,7 +595,7 @@ module.exports = class CompilationEngine {
         return
       }
       this.tokenizer.advance()
-      numOfArgs = this.compileExpressionList()
+      numOfArgs = this.compileExpressionList(isClass)
       if (this.tokenizer.symbol() !== ')') {
         console.warn('No closing ) for the expressionlist')
         return

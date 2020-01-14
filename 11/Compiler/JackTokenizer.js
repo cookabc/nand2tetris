@@ -2,7 +2,7 @@ const fs = require('fs')
 
 const keywordPattern = '^class$|^constructor$|^function$|^method$|^field$|^static$|^var$|^int$|^char$|^boolean$|^void$|^true$|^false$|^null$|^this$|^let$|^do$|^if$|^else$|^while$|^return$'
 const symbolPattern = '[\\&\\*\\+\\(\\)\\.\\/\\,\\-\\]\\;\\~\\}\\|\\{\\>\\=\\[\\<]'
-const intPattern = '[0-9]+'
+const intPattern = '^[0-9]+$'
 const stringPattern = '"[^"\n]*"'
 const identifierPattern = '[\\w_]+'
 
