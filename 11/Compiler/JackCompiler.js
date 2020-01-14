@@ -1,7 +1,8 @@
-const fs = require("fs")
+const fs = require('fs')
 
-const JackTokenizer = require("./JackTokenizer")
-const CompilationEngine = require("./CompilationEngine")
+const JackTokenizer = require('./JackTokenizer')
+const CompilationEngine = require('./CompilationEngine')
+const VMWrite = require('./VMWrite')
 
 const fileName = process.argv[2]
 const isDirectory = fs.lstatSync(fileName).isDirectory()
@@ -18,16 +19,11 @@ if (isDirectory) {
 }
 
 function processFileData(inputFile) {
-  if (inputFile.endsWith(".jack")) {
+  if (inputFile.endsWith('.jack')) {
+    const writer = new VMWrite(inputFile.split('.jack').join('.vm'))
     const tokenizer = new JackTokenizer(inputFile)
-    const compilationEngine = new CompilationEngine(tokenizer)
+    const compilationEngine = new CompilationEngine(tokenizer, writer)
     compilationEngine.compileClass()
-    writeOutFile(inputFile.split(".jack").join("_new.xml"), compilationEngine.output.join("\n"))
+    writer.writeFile()
   }
-}
-
-function writeOutFile(name, data) {
-  fs.writeFile(name, data, (err) => {
-    if (err) throw err
-  })
 }
