@@ -2,7 +2,7 @@ const fs = require('fs')
 
 const JackTokenizer = require('./JackTokenizer')
 const CompilationEngine = require('./CompilationEngine')
-const VMWrite = require('./VMWrite')
+const VMWrite = require('./VMWriter')
 
 const fileName = process.argv[2]
 const isDirectory = fs.lstatSync(fileName).isDirectory()

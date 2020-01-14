@@ -1,23 +1,60 @@
 module.exports = class SymbolTable {
-  constructor() {}
-  
-  startSubroutine() {}
+  constructor() {
+    this.classTable = {}
+    this.subTable = {}
+    this.kindIndex = {
+      static: 0,
+      field: 0,
+      arg: 0,
+      var: 0
+    }
+  }
 
-  define(name, type, kind) {}
+  startSubroutine() {
+    this.subTable = {}
+    this.kindIndex.arg = 0
+    this.kindIndex.var = 0
+  }
+
+  define(name, type, kind) {
+    kind = kind.toLowerCase()
+    if (['static', 'field'].includes(kind)) {
+      this.classTable[name] = [type, kind, this.kindIndex[kind]++]
+    }
+    if (['arg', 'var'].includes(kind)) {
+      this.subTable[name] = [type, kind, this.kindIndex[kind]++]
+    }
+  }
 
   varCount(kind) {
-    return 0
+    kind = kind.toLowerCase()
+    return this.kindIndex[kind]
   }
 
   kindOf(name) {
-    return ""
+    if (this.subTable.hasOwnProperty(name)) {
+      return this.subTable[name][1]
+    }
+    if (this.classTable.hasOwnProperty(name)) {
+      return this.classTable[name][1]
+    }
   }
 
   typeOf(name) {
-    return ""
+    if (this.subTable.hasOwnProperty(name)) {
+      return this.subTable[name][0]
+    }
+    if (this.classTable.hasOwnProperty(name)) {
+      return this.classTable[name][0]
+    }
   }
 
   indexOf(name) {
-    return -1
+    if (this.subTable.hasOwnProperty(name)) {
+      return this.subTable[name][2]
+    }
+    if (this.classTable.hasOwnProperty(name)) {
+      return this.classTable[name][2]
+    }
   }
 }
