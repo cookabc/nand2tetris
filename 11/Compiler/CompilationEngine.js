@@ -1,9 +1,9 @@
 const SymboTable = require('./SymbolTable')
 
-const whileCON = 'WHILE_CON'
-const whileEND = 'WHILE_END'
 const ifTrue = 'IF_TRUE'
 const ifFalse = 'IF_FALSE'
+const whileCON = 'WHILE_CON'
+const whileEND = 'WHILE_END'
 
 module.exports = class CompilationEngine {
   constructor(tokenizer, writer) {
@@ -145,17 +145,20 @@ module.exports = class CompilationEngine {
       console.warn('illegal subroutine name')
       return
     }
+    if (subRoutineKind === 'METHOD') {
+      this.table.define('this', this.className, 'ARG')
+    }
     // match parameter list
     this.tokenizer.advance()
     if (this.tokenizer.symbol() === '(') {
       this.compileParameterList()
     } else {
-      console.warn('no () after function name')
+      console.warn('no ( after function name')
       return
     }
     // match the closing ) for the paramater list
     if (this.tokenizer.symbol() !== ')') {
-      consolse.warn('no () after function name')
+      consolse.warn('no ) after function name')
       return
     }
     // match subroutine body
@@ -332,7 +335,6 @@ module.exports = class CompilationEngine {
     this.tokenizer.advance()
     if (this.tokenizer.symbol() === '[') {
       this.tokenizer.advance()
-      // this.tokenizer.advance()
       this.compileExpression()
       if (this.tokenizer.symbol() !== ']') {
         console.warn('1, No closing ] for the array expression')
@@ -406,8 +408,9 @@ module.exports = class CompilationEngine {
       if (this.tokenizer.symbol() !== ';') {
         console.warn('return statement not ending with ;')
       }
+    } else {
+      this.writer.writePush('constant', 0)
     }
-    this.writer.writePush('constant', 0)
     this.writer.writeReturn()
   }
 

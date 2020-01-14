@@ -18,16 +18,16 @@ module.exports = class VMWriter {
     this.output += `${command}\n`
   }
 
-  writeLabel(label) {
-    this.output += `label ${label}\n`
+  writeLabel(label, counter) {
+    this.output += `label ${label}${counter}\n`
   }
 
-  writeGoto(label) {
-    this.output += `goto ${label}\n`
+  writeGoto(label, counter) {
+    this.output += `goto ${label}${counter}\n`
   }
 
-  writeIf(label) {
-    this.output += `if-goto ${label}\n`
+  writeIf(label, counter) {
+    this.output += `if-goto ${label}${counter}\n`
   }
 
   writeCall(name, nArgs) {
