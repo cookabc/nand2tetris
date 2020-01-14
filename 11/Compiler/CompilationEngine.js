@@ -299,8 +299,7 @@ module.exports = class CompilationEngine {
 
   compileDo() {
     this.tokenizer.advance()
-    // Before call compileSubRoutineCall, first check if the current
-    // token is valid identifier. Then advance again and check if the it is . or (
+    // Before call compileSubRoutineCall, first check if the current token is valid identifier. Then advance again and check if the it is . or (
     if (this.checkIdentifier()) {
       let firstHalf = this.currentName
       this.tokenizer.advance()
@@ -603,8 +602,8 @@ module.exports = class CompilationEngine {
         console.warn('No closing ) for the expressionlist')
         return
       }
-      if (fullSubName != null) this.writer.writeCall(fullSubName, numOfArgs)
     }
+    if (fullSubName != null) this.writer.writeCall(fullSubName, numOfArgs)
   }
 
   compileExpressionList(isClass) {
